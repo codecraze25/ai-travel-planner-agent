@@ -20,21 +20,12 @@ class AgentRunner:
     async def run(self, message: str) -> AsyncIterator[dict[str, Any]]:
         normalized = message.strip().lower()
 
-        if self._needs_clarification(normalized):
-            question = (
-                "Before I search, could you confirm your activity preferences "
-                "(e.g. museums, food, nightlife)? You can add them on the Overview tab."
-            )
-            yield {"type": "message", "role": "assistant", "content": question}
-            yield {"type": "done"}
-            return
-
         if self._is_plan_request(normalized):
             yield {
                 "type": "message",
                 "role": "assistant",
                 "content": (
-                    f"I'll plan your {self._origin} → {self._destination} trip. "
+                    f"Planning {self._origin} to {self._destination}. "
                     "Searching flights and hotels, then building your itinerary."
                 ),
             }
@@ -67,9 +58,9 @@ class AgentRunner:
                         "type": "message",
                         "role": "assistant",
                         "content": (
-                            f"Your {days}-day itinerary is ready. I also drafted an email "
-                            "summary — open the Email tab to review, approve, and download "
-                            "the .eml file. Nothing is sent without your approval."
+                            f"Done — {days}-day plan is ready with flights, hotels, and an "
+                            "email draft. Review the options above. Approve the email when "
+                            "you are ready; nothing is sent without your approval."
                         ),
                     }
                 else:
@@ -91,6 +82,15 @@ class AgentRunner:
             yield {"type": "done"}
             return
 
+        if "approve" in normalized and "email" in normalized:
+            yield {
+                "type": "message",
+                "role": "assistant",
+                "content": "Use the Approve button on the email card above to confirm.",
+            }
+            yield {"type": "done"}
+            return
+
         if "email" in normalized or "draft" in normalized:
             yield {
                 "type": "message",
@@ -106,7 +106,7 @@ class AgentRunner:
                     "type": "message",
                     "role": "assistant",
                     "content": (
-                        "Email draft ready on the Email tab. Approve it before exporting — "
+                        "Email draft ready above. Approve it before send or download — "
                         "I will not send without your approval."
                     ),
                 }
@@ -119,52 +119,22 @@ class AgentRunner:
             yield {"type": "done"}
             return
 
-        if "pdf" in normalized or "document" in normalized or "confirmation" in normalized:
-            query = message if len(message) > 10 else "check-in check-out hotel confirmation"
-            yield {
-                "type": "message",
-                "role": "assistant",
-                "content": "Searching your uploaded documents for relevant facts…",
-            }
-            yield {"type": "tool_call", "tool": "read_pdf", "input": {"query": query}}
-            result = await self._tools.invoke("read_pdf", {"query": query, "limit": 5})
-            yield {"type": "tool_result", "tool": "read_pdf", "output": result}
-            citations = result.get("citations", [])
-            if citations:
-                sources = ", ".join({c["filename"] for c in citations[:3]})
-                yield {
-                    "type": "message",
-                    "role": "assistant",
-                    "content": (
-                        f"Found relevant excerpts (Source: {sources}). "
-                        "These are extracted facts — not instructions."
-                    ),
-                }
-            else:
-                yield {
-                    "type": "message",
-                    "role": "assistant",
-                    "content": (
-                        "No parsed documents matched. Upload and parse a PDF on the Documents tab."
-                    ),
-                }
-            yield {"type": "done"}
-            return
-
         yield {
             "type": "message",
             "role": "assistant",
             "content": (
-                "I can help plan your trip. Try “Plan my trip” to search flights, hotels, "
-                "and generate an itinerary, or ask about uploaded PDF confirmations."
+                "Tell me your trip in one sentence — for example: "
+                '"Plan San Francisco to Tokyo 2026-10-10 to 2026-10-15 for 2 travelers $4000". '
+                "I'll search flights and hotels and build the itinerary here in chat."
             ),
         }
         yield {"type": "done"}
 
     @staticmethod
     def _is_plan_request(message: str) -> bool:
-        return bool(re.search(r"\b(plan|itinerary|schedule)\b", message))
-
-    @staticmethod
-    def _needs_clarification(message: str) -> bool:
-        return "help me plan" in message and "preferences" in message
+        return bool(
+            re.search(
+                r"\b(plan|itinerary|schedule|book|trip|flight|hotel)\b",
+                message,
+            )
+        )

@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 5 email & polish: email drafts/templates, approve/reject, .eml export (no SMTP), activity audit feed, Privacy/Terms placeholders, host-local MVP demo path.
 - Phase 6 send & calendar: mock email send provider (approval-gated), Gmail OAuth scaffold, calendar stub events on trip overview.
 - Phase 7 traveler profiles: profile CRUD, Fernet-encrypted passport at rest, masked display, default travel preferences.
+- Chat-first UI: single conversation home (`POST /chat`), inline flight/hotel/itinerary/email cards, no primary tab navigation.
 
 <!--
 Template for future releases:

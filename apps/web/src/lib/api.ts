@@ -552,6 +552,52 @@ export async function listActivity(
   return data.items;
 }
 
+export async function streamSessionChat(
+  message: string,
+  onEvent: (event: AgentStreamEvent) => void,
+  signal?: AbortSignal,
+  tripId?: string | null,
+  token?: string | null,
+): Promise<void> {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${getApiBaseUrl()}/chat`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ message, trip_id: tripId ?? null }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `Chat failed: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response stream");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          onEvent(JSON.parse(line.slice(6)) as AgentStreamEvent);
+        } catch {
+          // skip malformed chunks
+        }
+      }
+    }
+  }
+}
+
 export async function streamAgentChat(
   tripId: string,
   message: string,

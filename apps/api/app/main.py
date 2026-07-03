@@ -15,6 +15,7 @@ from app.api.routes import (
     activity,
     agent,
     calendar,
+    chat,
     documents,
     emails,
     health,
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CorrelationIdMiddleware)
 
     app.include_router(health.router)
+    app.include_router(chat.router)
     app.include_router(trips.router)
     app.include_router(travel.router)
     app.include_router(documents.router)

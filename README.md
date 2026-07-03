@@ -2,12 +2,12 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-phase%207-blue)
-![stage](https://img.shields.io/badge/stage-traveler%20profiles-lightgrey)
+![status](https://img.shields.io/badge/status-chat%20first-blue)
+![stage](https://img.shields.io/badge/stage-one%20sentence%20trips-lightgrey)
 
 ## Status
 
-**Phase 7 (post-MVP)** — traveler profiles with Fernet-encrypted passport storage (masked in UI).
+**Chat-first UX** — one conversation plans the trip (flights, hotels, itinerary, email). No tab maze.
 
 ## Quick start (no Docker)
 
@@ -111,5 +111,5 @@ docker-compose.yml
 ## Next steps
 
 1. Run `.\scripts\dev.ps1` and open http://localhost:3000
-2. Create a Tokyo trip → **Chat** → “Plan my trip” → review **Itinerary** → **Email** (approve → download `.eml`) → **Activity**
-3. Post-MVP ideas — see [docs/PLAN.md](./docs/PLAN.md#13-post-mvp-roadmap)
+2. Type one sentence, e.g. `Plan San Francisco to Tokyo 2026-10-10 to 2026-10-15 for 2 travelers $4000`
+3. Select flight/hotel in chat, approve email when ready
