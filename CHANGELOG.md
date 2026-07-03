@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.env.example`, pre-commit config, PR/issue templates.
 - Phase 1 trip CRUD: users/trips migrations, trip API, dashboard, new trip form, trip detail shell, dev auth.
 - Phase 2 travel search: mock flight/hotel providers, search/select endpoints, budget tracking, Flights/Hotels UI with tradeoff summaries and booking links.
+- Phase 3 documents & RAG: PDF upload to S3/MinIO, PyMuPDF parsing, structured extraction, chunk embeddings, semantic search with source citations, Documents tab UI.
+- Phase 4 agent & itinerary: mock agent chat (SSE), tool wiring (search, read_pdf, budget, generate_itinerary), guardrails, itinerary CRUD, Chat + Itinerary tabs, eval harness.
 
 <!--
 Template for future releases:

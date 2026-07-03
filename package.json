@@ -1,0 +1,9 @@
+{
+  "name": "ai-travel-planner-agent",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File ./scripts/dev.ps1",
+    "dev:api": "cd apps/api && .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8010 --reload",
+    "dev:web": "cd apps/web && npm run dev -- -H 0.0.0.0 -p 3000"
+  }
+}

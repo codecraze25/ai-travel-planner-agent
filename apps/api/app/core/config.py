@@ -1,14 +1,22 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_API_DIR = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_ENV_FILES = (
+    str(_API_DIR / ".env"),
+    str(_REPO_ROOT / ".env"),
+)
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
@@ -20,11 +28,16 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, alias="API_PORT")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
 
+    # Host-local default: SQLite (no Docker). Docker Compose overrides to Postgres.
     database_url: str = Field(
-        default="postgresql+asyncpg://travel:travel@localhost:5432/travel_planner",
+        default="sqlite+aiosqlite:///./data/travel.db",
         alias="DATABASE_URL",
     )
-    redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
+    # Empty = Redis optional (host-local). Docker sets redis://redis:6379/0
+    redis_url: str = Field(default="", alias="REDIS_URL")
+
+    storage_backend: str = Field(default="local", alias="STORAGE_BACKEND")
+    local_storage_path: str = Field(default="./data/uploads", alias="LOCAL_STORAGE_PATH")
 
     s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")
     s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
@@ -33,6 +46,10 @@ class Settings(BaseSettings):
     s3_region: str = Field(default="us-east-1", alias="S3_REGION")
 
     use_mock_providers: bool = Field(default=True, alias="USE_MOCK_PROVIDERS")
+    use_mock_llm: bool = Field(default=True, alias="USE_MOCK_LLM")
+
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    llm_model: str = Field(default="gpt-4o-mini", alias="LLM_MODEL")
 
     auth_disabled: bool = Field(default=True, alias="AUTH_DISABLED")
     dev_user_id: str = Field(default="dev-user", alias="DEV_USER_ID")
@@ -42,6 +59,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def redis_enabled(self) -> bool:
+        return bool(self.redis_url.strip())
 
 
 @lru_cache

@@ -7,12 +7,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.adapters.db.models import (
+    AgentActionModel,
+    DocumentChunkModel,
+    DocumentModel,
     FlightModel,
     HotelModel,
+    ItineraryItemModel,
+    ItineraryModel,
     TripModel,
     TripPreferencesModel,
     UserModel,
 )
+from app.domain.documents import DocumentStatus
 
 
 class UserRepository:
@@ -161,3 +167,141 @@ class HotelRepository:
                 selected = hotel
         await self._session.flush()
         return selected
+
+
+class DocumentRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(self, document: DocumentModel) -> DocumentModel:
+        self._session.add(document)
+        await self._session.flush()
+        return document
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[DocumentModel]:
+        result = await self._session.execute(
+            select(DocumentModel)
+            .where(DocumentModel.trip_id == trip_id)
+            .order_by(DocumentModel.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_for_trip(
+        self, document_id: uuid.UUID, trip_id: uuid.UUID
+    ) -> DocumentModel | None:
+        result = await self._session.execute(
+            select(DocumentModel)
+            .where(DocumentModel.id == document_id, DocumentModel.trip_id == trip_id)
+            .options(selectinload(DocumentModel.chunks))
+        )
+        return result.scalar_one_or_none()
+
+    async def delete(self, document: DocumentModel) -> None:
+        await self._session.delete(document)
+        await self._session.flush()
+
+    async def replace_chunks(
+        self, document_id: uuid.UUID, chunks: list[DocumentChunkModel]
+    ) -> None:
+        existing = await self._session.execute(
+            select(DocumentChunkModel).where(DocumentChunkModel.document_id == document_id)
+        )
+        for row in existing.scalars().all():
+            await self._session.delete(row)
+        await self._session.flush()
+        for chunk in chunks:
+            chunk.document_id = document_id
+            self._session.add(chunk)
+        await self._session.flush()
+
+    async def list_chunks_for_trip(self, trip_id: uuid.UUID) -> list[DocumentChunkModel]:
+        result = await self._session.execute(
+            select(DocumentChunkModel)
+            .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+            .where(
+                DocumentModel.trip_id == trip_id,
+                DocumentModel.status == DocumentStatus.READY,
+            )
+            .options(selectinload(DocumentChunkModel.document))
+        )
+        return list(result.scalars().all())
+
+
+class ItineraryRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_latest_for_trip(self, trip_id: uuid.UUID) -> ItineraryModel | None:
+        result = await self._session.execute(
+            select(ItineraryModel)
+            .where(ItineraryModel.trip_id == trip_id)
+            .options(selectinload(ItineraryModel.items))
+            .order_by(ItineraryModel.version.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def create(
+        self,
+        trip_id: uuid.UUID,
+        total_est_cost_usd: float,
+        items: list[ItineraryItemModel],
+        version: int = 1,
+    ) -> ItineraryModel:
+        itinerary = ItineraryModel(
+            trip_id=trip_id,
+            version=version,
+            total_est_cost_usd=total_est_cost_usd,
+        )
+        self._session.add(itinerary)
+        await self._session.flush()
+        for idx, item in enumerate(items):
+            item.itinerary_id = itinerary.id
+            item.sort_order = idx
+            self._session.add(item)
+        await self._session.flush()
+        await self._session.refresh(itinerary, attribute_names=["items"])
+        return itinerary
+
+    async def next_version(self, trip_id: uuid.UUID) -> int:
+        latest = await self.get_latest_for_trip(trip_id)
+        return 1 if latest is None else latest.version + 1
+
+
+class AgentActionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def log(
+        self,
+        *,
+        trip_id: uuid.UUID,
+        user_id: uuid.UUID,
+        tool_name: str,
+        input_json: dict[str, object] | None,
+        output_json: dict[str, object] | None,
+        success: bool,
+        error_message: str | None = None,
+        correlation_id: str | None = None,
+    ) -> AgentActionModel:
+        action = AgentActionModel(
+            trip_id=trip_id,
+            user_id=user_id,
+            tool_name=tool_name,
+            input_json=input_json,
+            output_json=output_json,
+            success=success,
+            error_message=error_message,
+            correlation_id=correlation_id,
+        )
+        self._session.add(action)
+        await self._session.flush()
+        return action
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[AgentActionModel]:
+        result = await self._session.execute(
+            select(AgentActionModel)
+            .where(AgentActionModel.trip_id == trip_id)
+            .order_by(AgentActionModel.created_at.desc())
+        )
+        return list(result.scalars().all())

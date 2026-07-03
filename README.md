@@ -2,63 +2,69 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-phase%202-blue)
-![stage](https://img.shields.io/badge/stage-travel%20search-lightgrey)
+![status](https://img.shields.io/badge/status-phase%204-blue)
+![stage](https://img.shields.io/badge/stage-agent%20%26%20itinerary-lightgrey)
 
 ## Status
 
-**Phase 2** — trip CRUD plus flight/hotel search (mock providers), tradeoff summaries, selection, and live budget bar. PDF/RAG is Phase 3.
+**Phase 4** — mock agent chat (SSE), itinerary generation, guardrails, and eval harness. Email approval flow is Phase 5.
 
-## Quick start (Docker only)
+## Quick start (no Docker)
 
-You do **not** need a Python venv on your machine. The API container installs dependencies and runs **uvicorn** for you.
+Host-local mode uses **SQLite** + **local file storage**. No Postgres, Redis, MinIO, or Docker required.
 
 ### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- Python 3.11+
+- Node.js 20+
 
-### Start the stack
+### Start
 
-```bash
-cp .env.example .env
-docker compose up --build
+```powershell
+# From the repo root (Windows)
+.\scripts\dev.ps1
 ```
 
-On startup the `api` service:
+Or in two terminals:
 
-1. Runs `alembic upgrade head` (creates `users` / `trips` tables)
-2. Starts `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+```powershell
+# Terminal 1 — API
+cd apps\api
+python -m venv .venv
+.\.venv\Scripts\pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8010 --reload
+
+# Terminal 2 — Web
+cd apps\web
+npm install
+npm run dev -- -H 0.0.0.0 -p 3000
+```
+
+> **Port note:** the API uses **8010** by default so it does not collide with other apps often bound to `8000`. The web app reads `NEXT_PUBLIC_API_URL` from `apps/web/.env.local`.
 
 Open:
 
 | Service | URL |
 |---------|-----|
 | Web | http://localhost:3000 |
-| API health | http://localhost:8000/health |
-| API ready | http://localhost:8000/ready |
-| API docs | http://localhost:8000/docs |
-| MinIO console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+| API health | http://localhost:8010/health |
+| API ready | http://localhost:8010/ready |
+| API docs | http://localhost:8010/docs |
 
 Dev auth is on by default (`AUTH_DISABLED=true`) — no Clerk keys needed.
 
-### Useful commands
+Data is stored under `apps/api/data/` (SQLite DB + uploaded PDFs).
+
+## Optional: Docker Compose
+
+If you have [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed:
 
 ```bash
-docker compose up --build          # start everything
-docker compose logs -f api         # watch uvicorn logs
-docker compose down                # stop
-docker compose exec api alembic upgrade head   # re-run migrations if needed
+cp .env.example .env
+docker compose up --build
 ```
 
-### Why no venv?
-
-A **venv** is only for running Python tools *on the host* (outside Docker). With Docker:
-
-- Dependencies install **inside** the `api` image
-- **uvicorn** runs **inside** the container
-- Postgres, Redis, and MinIO run as sibling containers
-
-Host-side `apps/api/.venv` is optional and only useful if you want to run pytest/ruff without Docker.
+Compose overrides host-local defaults with Postgres, Redis, and MinIO.
 
 ## Documentation
 
@@ -77,9 +83,10 @@ Host-side `apps/api/.venv` is optional and only useful if you want to run pytest
 
 ```
 apps/web          # Next.js frontend
-apps/api          # FastAPI backend (uvicorn in Docker)
+apps/api          # FastAPI backend
 packages/shared   # Shared TypeScript types
 docs/             # Requirements, plan, architecture, ADRs, runbook
+scripts/dev.ps1   # Host-local start script
 .github/          # CI workflows and templates
 docker-compose.yml
 ```
@@ -96,14 +103,13 @@ docker-compose.yml
 ## Tech stack
 
 - **Frontend:** Next.js, React, TypeScript, Tailwind
-- **Backend:** FastAPI + uvicorn (clean architecture), LangGraph (Phase 4)
-- **Database:** PostgreSQL + pgvector
-- **Queue:** Redis (+ Celery in Phase 3)
-- **Storage:** S3 / MinIO
+- **Backend:** FastAPI + uvicorn (clean architecture), agent tools (Phase 4)
+- **Database:** SQLite (host-local) or PostgreSQL + pgvector (Docker)
+- **Storage:** Local filesystem (host-local) or S3 / MinIO (Docker)
 - **CI/CD:** GitHub Actions
 
 ## Next steps
 
-1. Install Docker Desktop, then `docker compose up --build`
-2. Create a Tokyo trip → Flights tab → Search → Select → Hotels tab → Search → Select
-3. Phase 3 — PDF upload and RAG — see [docs/PLAN.md](./docs/PLAN.md#phase-3--documents--rag)
+1. Run `.\scripts\dev.ps1` and open http://localhost:3000
+2. Create a Tokyo trip → open **Chat** → “Plan my trip” → review **Itinerary** tab
+3. Phase 5 — email drafts and approval — see [docs/PLAN.md](./docs/PLAN.md#phase-5--email--polish)

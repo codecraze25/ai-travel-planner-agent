@@ -4,11 +4,14 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BudgetBar } from "@/components/BudgetBar";
+import { ChatPanel } from "@/components/ChatPanel";
+import { DocumentsPanel } from "@/components/DocumentsPanel";
 import { FlightsPanel } from "@/components/FlightsPanel";
 import { HotelsPanel } from "@/components/HotelsPanel";
+import { ItineraryPanel } from "@/components/ItineraryPanel";
 import { getBudget, getTrip, type Budget, type Trip } from "@/lib/api";
 
-const tabs = ["Overview", "Flights", "Hotels", "Documents", "Itinerary", "Email"] as const;
+const tabs = ["Overview", "Chat", "Flights", "Hotels", "Documents", "Itinerary", "Email"] as const;
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
@@ -114,9 +117,15 @@ export default function TripDetailPage() {
         <HotelsPanel tripId={trip.id} onBudgetChange={setBudget} />
       )}
 
-      {(activeTab === "Documents" || activeTab === "Itinerary" || activeTab === "Email") && (
+      {activeTab === "Documents" && <DocumentsPanel tripId={trip.id} />}
+
+      {activeTab === "Chat" && <ChatPanel tripId={trip.id} />}
+
+      {activeTab === "Itinerary" && <ItineraryPanel tripId={trip.id} />}
+
+      {activeTab === "Email" && (
         <section className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-          {activeTab} — coming in a later phase.
+          Email drafts and approval — coming in Phase 5.
         </section>
       )}
     </div>

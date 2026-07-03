@@ -203,3 +203,204 @@ export async function selectHotel(
 export async function getBudget(tripId: string, token?: string | null): Promise<Budget> {
   return apiFetch<Budget>(`/trips/${tripId}/budget`, {}, token);
 }
+
+export interface ExtractedFields {
+  dates: string[];
+  times: string[];
+  locations: string[];
+  reservation_numbers: string[];
+  passenger_names: string[];
+  confirmation_codes: string[];
+  check_in?: string | null;
+  check_out?: string | null;
+  policy_rules: string[];
+}
+
+export interface DocumentItem {
+  id: string;
+  trip_id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  status: "uploaded" | "parsing" | "ready" | "failed";
+  extracted_fields?: ExtractedFields | null;
+  error_message?: string | null;
+  injection_flagged: boolean;
+  created_at: string;
+}
+
+export interface DocumentCitation {
+  document_id: string;
+  filename: string;
+  chunk_index: number;
+  content: string;
+  score: number;
+}
+
+export async function listDocuments(
+  tripId: string,
+  token?: string | null,
+): Promise<DocumentItem[]> {
+  const data = await apiFetch<{ items: DocumentItem[] }>(
+    `/trips/${tripId}/documents`,
+    {},
+    token,
+  );
+  return data.items;
+}
+
+export async function uploadDocument(
+  tripId: string,
+  file: File,
+  token?: string | null,
+): Promise<DocumentItem> {
+  const form = new FormData();
+  form.append("file", file);
+  const headers: HeadersInit = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(`${getApiBaseUrl()}/trips/${tripId}/documents`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `Upload failed: ${response.status}`);
+  }
+  return response.json() as Promise<DocumentItem>;
+}
+
+export async function parseDocument(
+  tripId: string,
+  documentId: string,
+  token?: string | null,
+): Promise<DocumentItem> {
+  return apiFetch<DocumentItem>(
+    `/trips/${tripId}/documents/${documentId}/parse`,
+    { method: "POST", body: "{}" },
+    token,
+  );
+}
+
+export async function deleteDocument(
+  tripId: string,
+  documentId: string,
+  token?: string | null,
+): Promise<void> {
+  await apiFetch<void>(
+    `/trips/${tripId}/documents/${documentId}`,
+    { method: "DELETE" },
+    token,
+  );
+}
+
+export async function searchDocuments(
+  tripId: string,
+  query: string,
+  token?: string | null,
+): Promise<{ citations: DocumentCitation[]; facts_note: string }> {
+  return apiFetch(
+    `/trips/${tripId}/documents/search`,
+    { method: "POST", body: JSON.stringify({ query, limit: 5 }) },
+    token,
+  );
+}
+
+export interface ItineraryItem {
+  id: string;
+  day_number: number;
+  time_block: string;
+  title: string;
+  description: string;
+  location?: string | null;
+  est_cost_usd: number;
+  map_url?: string | null;
+  backup_option?: string | null;
+}
+
+export interface Itinerary {
+  id: string;
+  trip_id: string;
+  version: number;
+  total_est_cost_usd: number;
+  created_at: string;
+  items: ItineraryItem[];
+}
+
+export async function getItinerary(
+  tripId: string,
+  token?: string | null,
+): Promise<Itinerary> {
+  return apiFetch<Itinerary>(`/trips/${tripId}/itinerary`, {}, token);
+}
+
+export async function generateItinerary(
+  tripId: string,
+  regenerateDay?: number,
+  token?: string | null,
+): Promise<Itinerary> {
+  return apiFetch<Itinerary>(
+    `/trips/${tripId}/itinerary/generate`,
+    {
+      method: "POST",
+      body: JSON.stringify({ regenerate_day: regenerateDay ?? null }),
+    },
+    token,
+  );
+}
+
+export type AgentStreamEvent = {
+  type: string;
+  role?: string;
+  content?: string;
+  tool?: string;
+  input?: unknown;
+  output?: unknown;
+  data?: unknown;
+};
+
+export async function streamAgentChat(
+  tripId: string,
+  message: string,
+  onEvent: (event: AgentStreamEvent) => void,
+  signal?: AbortSignal,
+  token?: string | null,
+): Promise<void> {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${getApiBaseUrl()}/trips/${tripId}/agent/chat`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ message }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(body || `Chat failed: ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response stream");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          onEvent(JSON.parse(line.slice(6)) as AgentStreamEvent);
+        } catch {
+          // skip malformed chunks
+        }
+      }
+    }
+  }
+}
