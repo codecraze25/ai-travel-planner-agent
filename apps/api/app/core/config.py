@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     google_client_id: str | None = Field(default=None, alias="GOOGLE_CLIENT_ID")
     google_client_secret: str | None = Field(default=None, alias="GOOGLE_CLIENT_SECRET")
 
+    # Used to encrypt passport numbers at rest (Fernet). Change in production.
+    profile_encryption_key: str = Field(
+        default="local-dev-profile-key-change-me",
+        alias="PROFILE_ENCRYPTION_KEY",
+    )
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 4 agent & itinerary: mock agent chat (SSE), tool wiring (search, read_pdf, budget, generate_itinerary), guardrails, itinerary CRUD, Chat + Itinerary tabs, eval harness.
 - Phase 5 email & polish: email drafts/templates, approve/reject, .eml export (no SMTP), activity audit feed, Privacy/Terms placeholders, host-local MVP demo path.
 - Phase 6 send & calendar: mock email send provider (approval-gated), Gmail OAuth scaffold, calendar stub events on trip overview.
+- Phase 7 traveler profiles: profile CRUD, Fernet-encrypted passport at rest, masked display, default travel preferences.
 
 <!--
 Template for future releases:

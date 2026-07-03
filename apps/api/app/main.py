@@ -19,6 +19,7 @@ from app.api.routes import (
     emails,
     health,
     itinerary,
+    profile,
     travel,
     trips,
 )
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(emails.router)
     app.include_router(activity.router)
     app.include_router(calendar.router)
+    app.include_router(profile.router)
 
     return app
 

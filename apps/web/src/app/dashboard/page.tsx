@@ -8,7 +8,15 @@ export default function DashboardPage() {
         <Link href="/" className="text-sm text-brand-600 hover:underline">
           ← Home
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900">Dashboard</h1>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <Link
+            href="/profile"
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            Traveler profile
+          </Link>
+        </div>
       </div>
       <TripDashboard />
     </div>

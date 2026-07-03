@@ -23,6 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <a href="/dashboard" className="text-slate-600 hover:text-brand-700">
                   Dashboard
                 </a>
+                <a href="/profile" className="text-slate-600 hover:text-brand-700">
+                  Profile
+                </a>
                 <a href="/privacy" className="text-slate-500 hover:text-brand-700">
                   Privacy
                 </a>
@@ -30,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Terms
                 </a>
                 <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-                  MVP
+                  Phase 7
                 </span>
               </nav>
             </div>

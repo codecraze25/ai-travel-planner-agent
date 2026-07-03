@@ -39,6 +39,30 @@ class UserModel(Base):
     trips: Mapped[list[TripModel]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    traveler_profile: Mapped[TravelerProfileModel | None] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
+
+class TravelerProfileModel(Base):
+    __tablename__ = "traveler_profiles"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    full_name: Mapped[str] = mapped_column(String(200))
+    nationality: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    passport_number_enc: Mapped[str | None] = mapped_column(Text, nullable=True)
+    passport_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    preferences_json: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped[UserModel] = relationship(back_populates="traveler_profile")
 
 
 class TripModel(Base):

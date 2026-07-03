@@ -16,6 +16,7 @@ from app.adapters.db.models import (
     HotelModel,
     ItineraryItemModel,
     ItineraryModel,
+    TravelerProfileModel,
     TripModel,
     TripPreferencesModel,
     UserModel,
@@ -44,6 +45,26 @@ class UserRepository:
         if user is not None:
             return user
         return await self.create(external_id, email)
+
+
+class TravelerProfileRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_for_user(self, user_id: uuid.UUID) -> TravelerProfileModel | None:
+        result = await self._session.execute(
+            select(TravelerProfileModel).where(TravelerProfileModel.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create(self, profile: TravelerProfileModel) -> TravelerProfileModel:
+        self._session.add(profile)
+        await self._session.flush()
+        return profile
+
+    async def save(self, profile: TravelerProfileModel) -> TravelerProfileModel:
+        await self._session.flush()
+        return profile
 
 
 class TripRepository:

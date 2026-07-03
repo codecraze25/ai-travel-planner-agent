@@ -2,12 +2,12 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-phase%206-blue)
-![stage](https://img.shields.io/badge/stage-send%20%26%20calendar-lightgrey)
+![status](https://img.shields.io/badge/status-phase%207-blue)
+![stage](https://img.shields.io/badge/stage-traveler%20profiles-lightgrey)
 
 ## Status
 
-**Phase 6 (post-MVP)** — mock email send after approval, Gmail provider scaffold, and calendar stub events. MVP features remain complete.
+**Phase 7 (post-MVP)** — traveler profiles with Fernet-encrypted passport storage (masked in UI).
 
 ## Quick start (no Docker)
 

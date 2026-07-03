@@ -482,6 +482,54 @@ export async function getCalendar(
   return apiFetch(`/trips/${tripId}/calendar`, {}, token);
 }
 
+export interface ProfilePreferences {
+  style?: string[];
+  hotel_prefs?: string;
+  flight_prefs?: string;
+  food_prefs?: string;
+  activity_prefs?: string;
+  accessibility?: string;
+  visa_notes?: string;
+  constraints?: string;
+}
+
+export interface TravelerProfile {
+  id: string;
+  user_id: string;
+  full_name: string;
+  nationality?: string | null;
+  date_of_birth?: string | null;
+  passport_masked?: string | null;
+  has_passport: boolean;
+  passport_expiry?: string | null;
+  preferences?: ProfilePreferences | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getProfile(token?: string | null): Promise<TravelerProfile> {
+  return apiFetch<TravelerProfile>("/profile", {}, token);
+}
+
+export async function upsertProfile(
+  payload: {
+    full_name: string;
+    nationality?: string | null;
+    date_of_birth?: string | null;
+    passport_number?: string | null;
+    clear_passport?: boolean;
+    passport_expiry?: string | null;
+    preferences?: ProfilePreferences | null;
+  },
+  token?: string | null,
+): Promise<TravelerProfile> {
+  return apiFetch<TravelerProfile>(
+    "/profile",
+    { method: "PUT", body: JSON.stringify(payload) },
+    token,
+  );
+}
+
 export interface ActivityItem {
   id: string;
   kind: string;
