@@ -13,6 +13,7 @@ class EmailStatus(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
     EXPORTED = "exported"
+    SENT = "sent"
 
 
 class EmailTemplate(StrEnum):

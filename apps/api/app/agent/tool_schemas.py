@@ -92,8 +92,19 @@ DRAFT_EMAIL_TOOL = {
 SEND_EMAIL_TOOL = {
     "name": "send_email",
     "description": (
-        "Export approved email as .eml (MVP). Requires explicit user approval. Does not use SMTP."
+        "Send an approved email via the configured provider (mock by default). "
+        "Requires explicit user approval."
     ),
+    "parameters": {
+        "type": "object",
+        "properties": {"trip_id": {"type": "string"}},
+        "required": ["trip_id"],
+    },
+}
+
+GET_CALENDAR_TOOL = {
+    "name": "get_calendar",
+    "description": "Read calendar events for trip dates (stub unless Google OAuth is connected).",
     "parameters": {
         "type": "object",
         "properties": {"trip_id": {"type": "string"}},
@@ -109,4 +120,5 @@ ALL_TOOLS = [
     CALCULATE_BUDGET_TOOL,
     DRAFT_EMAIL_TOOL,
     SEND_EMAIL_TOOL,
+    GET_CALENDAR_TOOL,
 ]

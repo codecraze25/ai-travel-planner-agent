@@ -49,11 +49,26 @@ async def init_database() -> None:
     """Create tables for host-local SQLite (Docker uses Alembic migrations)."""
     if not settings.database_url.startswith("sqlite"):
         return
+    from sqlalchemy import text
+
     from app.adapters.db import models as _models  # noqa: F401 — register models
     from app.adapters.db.base import Base
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Lightweight expand for existing local DBs (Alembic covers Postgres).
+        cols = {
+            row[1]
+            for row in (
+                await conn.execute(text("PRAGMA table_info(emails)"))
+            ).fetchall()
+        }
+        if cols and "sent_at" not in cols:
+            await conn.execute(text("ALTER TABLE emails ADD COLUMN sent_at DATETIME"))
+        if cols and "provider_message_id" not in cols:
+            await conn.execute(
+                text("ALTER TABLE emails ADD COLUMN provider_message_id VARCHAR(255)")
+            )
 
 
 async def check_database() -> bool:

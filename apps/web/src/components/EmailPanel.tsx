@@ -7,6 +7,7 @@ import {
   exportEmail,
   getLatestEmail,
   rejectEmail,
+  sendEmail,
   updateEmail,
   type EmailDraft,
 } from "@/lib/api";
@@ -103,9 +104,28 @@ export function EmailPanel({ tripId }: { tripId: string }) {
       a.download = result.filename;
       a.click();
       URL.revokeObjectURL(url);
-      showToast("Downloaded .eml (not sent via SMTP)");
+      showToast("Downloaded .eml");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export blocked — approve first");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onSend() {
+    if (!email) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await sendEmail(tripId, email.id);
+      setEmail(result.email);
+      showToast(
+        result.mock
+          ? `Mock send recorded (${result.message_id})`
+          : `Sent via ${result.provider}`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send blocked — approve first");
     } finally {
       setLoading(false);
     }
@@ -220,21 +240,35 @@ export function EmailPanel({ tripId }: { tripId: string }) {
                 </button>
               </>
             )}
-            {(email.status === "approved" || email.status === "exported") && (
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => void onExport()}
-                className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                Download .eml
-              </button>
+            {(email.status === "approved" ||
+              email.status === "exported" ||
+              email.status === "sent") && (
+              <>
+                {email.status !== "sent" && (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void onSend()}
+                    className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    Send (mock)
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => void onExport()}
+                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:opacity-50"
+                >
+                  Download .eml
+                </button>
+              </>
             )}
           </div>
 
           <p className="text-xs text-slate-500">
-            Guardrail: nothing is sent over SMTP. Approve, then download a .eml file to send
-            yourself.
+            Guardrail: send requires approval. Default provider is mock (no real Gmail). Set
+            USE_MOCK_EMAIL=false and Google OAuth credentials for live send later.
           </p>
         </div>
       )}

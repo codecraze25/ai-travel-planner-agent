@@ -12,10 +12,14 @@ from app.adapters.db.repositories import (
     ItineraryRepository,
     TripRepository,
 )
+from app.adapters.email.base import OutboundEmail
+from app.adapters.email.factory import get_email_provider
+from app.adapters.email.gmail import GmailNotConfiguredError
 from app.api.schemas.email import (
     EmailDraftRequest,
     EmailExportResponse,
     EmailResponse,
+    EmailSendResponse,
     EmailUpdateRequest,
 )
 from app.domain.email import (
@@ -42,6 +46,8 @@ def _to_response(email: EmailModel) -> EmailResponse:
         body_text=email.body_text,
         body_html=email.body_html,
         approved_at=email.approved_at,
+        sent_at=email.sent_at,
+        provider_message_id=email.provider_message_id,
         created_at=email.created_at or datetime.now(UTC),
         updated_at=email.updated_at or datetime.now(UTC),
     )
@@ -230,7 +236,11 @@ class EmailService:
         if email is None:
             return None
 
-        user_approved = email.status in {EmailStatus.APPROVED, EmailStatus.EXPORTED}
+        user_approved = email.status in {
+            EmailStatus.APPROVED,
+            EmailStatus.EXPORTED,
+            EmailStatus.SENT,
+        }
         if not can_send_email(user_approved=user_approved):
             raise EmailServiceError("Export/send requires explicit user approval.")
 
@@ -241,19 +251,81 @@ class EmailService:
             body_text=email.body_text,
             body_html=email.body_html,
         )
-        email.status = EmailStatus.EXPORTED
-        email.updated_at = datetime.now(UTC)
-        await self._emails.save(email)
+        if email.status == EmailStatus.APPROVED:
+            email.status = EmailStatus.EXPORTED
+            email.updated_at = datetime.now(UTC)
+            await self._emails.save(email)
         await self._audit.log(
             trip_id=trip_id,
             user_id=user.id,
             action="email.export",
-            details={"email_id": str(email.id), "note": "MVP export only — no SMTP send"},
+            details={"email_id": str(email.id), "note": "Downloaded .eml — no SMTP"},
         )
         response = EmailExportResponse(
             email=_to_response(email),
             eml=eml,
             filename=f"trip-{trip_id}-email-{email_id}.eml",
+        )
+        await self._session.commit()
+        return response
+
+    async def send(
+        self, trip_id: uuid.UUID, email_id: uuid.UUID, user: UserModel
+    ) -> EmailSendResponse | None:
+        """Send via configured provider only after explicit approval."""
+        trip = await self._trips.get_for_user(trip_id, user.id)
+        if trip is None:
+            return None
+        email = await self._emails.get_for_trip(email_id, trip_id)
+        if email is None:
+            return None
+
+        user_approved = email.status in {
+            EmailStatus.APPROVED,
+            EmailStatus.EXPORTED,
+            EmailStatus.SENT,
+        }
+        if not can_send_email(user_approved=user_approved):
+            raise EmailServiceError("send_email requires explicit user approval.")
+        if email.status == EmailStatus.SENT:
+            raise EmailServiceError("Email was already sent.")
+
+        provider = get_email_provider()
+        try:
+            result = await provider.send(
+                OutboundEmail(
+                    from_addr=user.email,
+                    to_addr=email.recipients,
+                    subject=email.subject,
+                    body_text=email.body_text,
+                    body_html=email.body_html,
+                )
+            )
+        except GmailNotConfiguredError as exc:
+            raise EmailServiceError(str(exc)) from exc
+
+        now = datetime.now(UTC)
+        email.status = EmailStatus.SENT
+        email.sent_at = now
+        email.provider_message_id = result.message_id
+        email.updated_at = now
+        await self._emails.save(email)
+        await self._audit.log(
+            trip_id=trip_id,
+            user_id=user.id,
+            action="email.send",
+            details={
+                "email_id": str(email.id),
+                "provider": result.provider,
+                "message_id": result.message_id,
+                "mock": result.mock,
+            },
+        )
+        response = EmailSendResponse(
+            email=_to_response(email),
+            provider=result.provider,
+            message_id=result.message_id,
+            mock=result.mock,
         )
         await self._session.commit()
         return response

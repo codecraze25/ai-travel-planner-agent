@@ -359,7 +359,7 @@ export type AgentStreamEvent = {
   data?: unknown;
 };
 
-export type EmailStatus = "draft" | "approved" | "rejected" | "exported";
+export type EmailStatus = "draft" | "approved" | "rejected" | "exported" | "sent";
 export type EmailTemplate = "itinerary_summary" | "family_share";
 
 export interface EmailDraft {
@@ -372,6 +372,8 @@ export interface EmailDraft {
   body_text: string;
   body_html: string;
   approved_at?: string | null;
+  sent_at?: string | null;
+  provider_message_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -451,6 +453,33 @@ export async function exportEmail(
     { method: "POST", body: "{}" },
     token,
   );
+}
+
+export async function sendEmail(
+  tripId: string,
+  emailId: string,
+  token?: string | null,
+): Promise<{ email: EmailDraft; provider: string; message_id: string; mock: boolean }> {
+  return apiFetch(
+    `/trips/${tripId}/emails/${emailId}/send`,
+    { method: "POST", body: "{}" },
+    token,
+  );
+}
+
+export interface CalendarEvent {
+  title: string;
+  start: string;
+  end: string;
+  location: string;
+  source: string;
+}
+
+export async function getCalendar(
+  tripId: string,
+  token?: string | null,
+): Promise<{ source: string; items: CalendarEvent[]; note?: string | null }> {
+  return apiFetch(`/trips/${tripId}/calendar`, {}, token);
 }
 
 export interface ActivityItem {

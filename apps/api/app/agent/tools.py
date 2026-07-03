@@ -13,6 +13,7 @@ from app.api.schemas.email import EmailDraftRequest
 from app.api.schemas.travel import FlightSearchRequest, HotelSearchRequest
 from app.domain.email import EmailStatus, EmailTemplate
 from app.domain.guardrails import is_tool_allowed
+from app.services.calendar_service import CalendarService
 from app.services.document_service import DocumentService
 from app.services.email_service import EmailService, EmailServiceError
 from app.services.itinerary_service import ItineraryService
@@ -40,6 +41,7 @@ class AgentTools:
         self._itinerary = ItineraryService(session)
         self._emails = EmailService(session)
         self._email_repo = EmailRepository(session)
+        self._calendar = CalendarService(session)
 
     async def invoke(self, tool_name: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
         args = args or {}
@@ -49,6 +51,7 @@ class AgentTools:
             if latest is not None and latest.status in {
                 EmailStatus.APPROVED,
                 EmailStatus.EXPORTED,
+                EmailStatus.SENT,
             }:
                 user_approved = True
         allowed, reason = is_tool_allowed(tool_name, user_approved=user_approved)
@@ -137,27 +140,22 @@ class AgentTools:
             return draft_resp.model_dump(mode="json")
 
         if tool_name == "send_email":
-            # MVP: export .eml only when an approved draft exists (guardrail).
             latest = await self._email_repo.get_latest_for_trip(self._trip_id)
             if latest is None:
                 return {"error": "No email draft found. Call draft_email first."}
-            approved = latest.status in {EmailStatus.APPROVED, EmailStatus.EXPORTED}
-            if not approved and not self._user_approved:
-                return {
-                    "error": "send_email requires explicit user approval.",
-                    "blocked": True,
-                }
             try:
-                export = await self._emails.export(self._trip_id, latest.id, self._user)
+                sent = await self._emails.send(self._trip_id, latest.id, self._user)
             except EmailServiceError as exc:
                 return {"error": str(exc), "blocked": True}
-            if export is None:
+            if sent is None:
                 return {"error": "Email not found"}
-            return {
-                "status": "exported",
-                "filename": export.filename,
-                "note": "MVP exports .eml only — no SMTP send",
-            }
+            return sent.model_dump(mode="json")
+
+        if tool_name == "get_calendar":
+            cal = await self._calendar.list_events(self._trip_id, self._user)
+            if cal is None:
+                return {"error": "Trip not found"}
+            return cal.model_dump(mode="json")
 
         return {"error": f"Unknown tool: {tool_name}"}
 

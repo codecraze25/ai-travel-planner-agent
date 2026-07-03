@@ -32,6 +32,8 @@ class EmailResponse(BaseModel):
     body_text: str
     body_html: str
     approved_at: datetime | None = None
+    sent_at: datetime | None = None
+    provider_message_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -44,3 +46,10 @@ class EmailExportResponse(BaseModel):
     email: EmailResponse
     eml: str
     filename: str
+
+
+class EmailSendResponse(BaseModel):
+    email: EmailResponse
+    provider: str
+    message_id: str
+    mock: bool

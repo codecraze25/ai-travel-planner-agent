@@ -50,6 +50,8 @@ class Settings(BaseSettings):
 
     use_mock_providers: bool = Field(default=True, alias="USE_MOCK_PROVIDERS")
     use_mock_llm: bool = Field(default=True, alias="USE_MOCK_LLM")
+    use_mock_email: bool = Field(default=True, alias="USE_MOCK_EMAIL")
+    use_mock_calendar: bool = Field(default=True, alias="USE_MOCK_CALENDAR")
 
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     llm_model: str = Field(default="gpt-4o-mini", alias="LLM_MODEL")
@@ -58,6 +60,9 @@ class Settings(BaseSettings):
     dev_user_id: str = Field(default="dev-user", alias="DEV_USER_ID")
     dev_user_email: str = Field(default="demo@example.com", alias="DEV_USER_EMAIL")
     clerk_secret_key: str | None = Field(default=None, alias="CLERK_SECRET_KEY")
+
+    google_client_id: str | None = Field(default=None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str | None = Field(default=None, alias="GOOGLE_CLIENT_SECRET")
 
     @property
     def cors_origin_list(self) -> list[str]:

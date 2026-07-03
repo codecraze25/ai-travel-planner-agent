@@ -11,7 +11,17 @@ from app.adapters.db.session import init_database
 from app.adapters.redis_client import close_redis
 from app.adapters.storage.s3 import check_storage, create_s3_client, ensure_bucket
 from app.api.middleware import CorrelationIdMiddleware
-from app.api.routes import activity, agent, documents, emails, health, itinerary, travel, trips
+from app.api.routes import (
+    activity,
+    agent,
+    calendar,
+    documents,
+    emails,
+    health,
+    itinerary,
+    travel,
+    trips,
+)
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 
@@ -75,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(itinerary.router)
     app.include_router(emails.router)
     app.include_router(activity.router)
+    app.include_router(calendar.router)
 
     return app
 

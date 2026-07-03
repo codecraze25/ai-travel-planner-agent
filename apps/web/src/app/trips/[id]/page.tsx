@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ActivityPanel } from "@/components/ActivityPanel";
 import { BudgetBar } from "@/components/BudgetBar";
+import { CalendarPanel } from "@/components/CalendarPanel";
 import { ChatPanel } from "@/components/ChatPanel";
 import { DocumentsPanel } from "@/components/DocumentsPanel";
 import { EmailPanel } from "@/components/EmailPanel";
@@ -120,6 +121,10 @@ export default function TripDetailPage() {
           <p className="pt-2 text-slate-500">
             Tip: use Chat → “Plan my trip”, then review Itinerary and Email tabs.
           </p>
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="mb-2 text-sm font-semibold text-slate-900">Calendar (stub)</h3>
+            <CalendarPanel tripId={trip.id} />
+          </div>
         </section>
       )}
 

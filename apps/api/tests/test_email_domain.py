@@ -58,3 +58,9 @@ def test_export_allowed_after_approval() -> None:
     assert can_send_email(user_approved=True)
     allowed, _ = is_tool_allowed("send_email", user_approved=True)
     assert allowed
+
+
+def test_send_blocked_without_approval() -> None:
+    allowed, reason = is_tool_allowed("send_email", user_approved=False)
+    assert not allowed
+    assert reason is not None

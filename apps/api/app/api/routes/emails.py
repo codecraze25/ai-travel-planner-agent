@@ -13,6 +13,7 @@ from app.api.schemas.email import (
     EmailExportResponse,
     EmailListResponse,
     EmailResponse,
+    EmailSendResponse,
     EmailUpdateRequest,
 )
 from app.core.auth import get_current_user
@@ -120,6 +121,22 @@ async def export_email(
 ) -> EmailExportResponse:
     try:
         result = await service.export(trip_id, email_id, user)
+    except EmailServiceError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email not found")
+    return result
+
+
+@router.post("/{email_id}/send", response_model=EmailSendResponse)
+async def send_email(
+    trip_id: uuid.UUID,
+    email_id: uuid.UUID,
+    user: Annotated[UserModel, Depends(get_current_user)],
+    service: Annotated[EmailService, Depends(get_email_service)],
+) -> EmailSendResponse:
+    try:
+        result = await service.send(trip_id, email_id, user)
     except EmailServiceError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     if result is None:
