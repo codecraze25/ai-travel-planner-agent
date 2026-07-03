@@ -4,8 +4,11 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_API_DIR = Path(__file__).resolve().parents[2]
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_CONFIG_PATH = Path(__file__).resolve()
+_API_DIR = _CONFIG_PATH.parents[2]
+# Host checkout: apps/api/app/core/config.py → repo root is parents[4].
+# Docker image: /app/app/core/config.py → only parents[0..3] exist.
+_REPO_ROOT = _CONFIG_PATH.parents[4] if len(_CONFIG_PATH.parents) > 4 else _API_DIR
 _ENV_FILES = (
     str(_API_DIR / ".env"),
     str(_REPO_ROOT / ".env"),

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { StatusPanel } from "@/components/StatusPanel";
 
 export default function HomePage() {
@@ -19,18 +21,18 @@ export default function HomePage() {
         <h2 className="text-lg font-semibold text-slate-900">Get started</h2>
         <p className="mt-1 text-sm text-slate-500">Phase 1 — create and manage trips.</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <a
+          <Link
             href="/dashboard"
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
             Open dashboard
-          </a>
-          <a
+          </Link>
+          <Link
             href="/trips/new"
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             New trip
-          </a>
+          </Link>
         </div>
       </section>
     </div>

@@ -19,7 +19,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 trip_status = postgresql.ENUM(
-    "draft", "planning", "ready", "archived", name="trip_status", create_type=True
+    "draft", "planning", "ready", "archived", name="trip_status", create_type=False
 )
 
 

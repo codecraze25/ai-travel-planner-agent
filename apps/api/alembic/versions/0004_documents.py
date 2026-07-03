@@ -19,7 +19,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 document_status = postgresql.ENUM(
-    "uploaded", "parsing", "ready", "failed", name="document_status", create_type=True
+    "uploaded", "parsing", "ready", "failed", name="document_status", create_type=False
 )
 
 
