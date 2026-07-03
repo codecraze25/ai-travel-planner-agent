@@ -6,7 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.adapters.db.models import TripModel, TripPreferencesModel, UserModel
+from app.adapters.db.models import (
+    FlightModel,
+    HotelModel,
+    TripModel,
+    TripPreferencesModel,
+    UserModel,
+)
 
 
 class UserRepository:
@@ -67,3 +73,91 @@ class TripRepository:
         await self._session.flush()
         await self._session.refresh(trip, attribute_names=["preferences"])
         return trip
+
+
+class FlightRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def replace_for_trip(
+        self, trip_id: uuid.UUID, flights: list[FlightModel]
+    ) -> list[FlightModel]:
+        existing = await self._session.execute(
+            select(FlightModel).where(FlightModel.trip_id == trip_id)
+        )
+        for row in existing.scalars().all():
+            await self._session.delete(row)
+        await self._session.flush()
+        for flight in flights:
+            flight.trip_id = trip_id
+            self._session.add(flight)
+        await self._session.flush()
+        return await self.list_for_trip(trip_id)
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[FlightModel]:
+        result = await self._session.execute(
+            select(FlightModel)
+            .where(FlightModel.trip_id == trip_id)
+            .order_by(FlightModel.price_usd.asc())
+        )
+        return list(result.scalars().all())
+
+    async def get_for_trip(self, flight_id: uuid.UUID, trip_id: uuid.UUID) -> FlightModel | None:
+        result = await self._session.execute(
+            select(FlightModel).where(FlightModel.id == flight_id, FlightModel.trip_id == trip_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def select(self, trip_id: uuid.UUID, flight_id: uuid.UUID) -> FlightModel | None:
+        flights = await self.list_for_trip(trip_id)
+        selected: FlightModel | None = None
+        for flight in flights:
+            flight.selected = flight.id == flight_id
+            if flight.selected:
+                selected = flight
+        await self._session.flush()
+        return selected
+
+
+class HotelRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def replace_for_trip(
+        self, trip_id: uuid.UUID, hotels: list[HotelModel]
+    ) -> list[HotelModel]:
+        existing = await self._session.execute(
+            select(HotelModel).where(HotelModel.trip_id == trip_id)
+        )
+        for row in existing.scalars().all():
+            await self._session.delete(row)
+        await self._session.flush()
+        for hotel in hotels:
+            hotel.trip_id = trip_id
+            self._session.add(hotel)
+        await self._session.flush()
+        return await self.list_for_trip(trip_id)
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[HotelModel]:
+        result = await self._session.execute(
+            select(HotelModel)
+            .where(HotelModel.trip_id == trip_id)
+            .order_by(HotelModel.total_price_usd.asc())
+        )
+        return list(result.scalars().all())
+
+    async def get_for_trip(self, hotel_id: uuid.UUID, trip_id: uuid.UUID) -> HotelModel | None:
+        result = await self._session.execute(
+            select(HotelModel).where(HotelModel.id == hotel_id, HotelModel.trip_id == trip_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def select(self, trip_id: uuid.UUID, hotel_id: uuid.UUID) -> HotelModel | None:
+        hotels = await self.list_for_trip(trip_id)
+        selected: HotelModel | None = None
+        for hotel in hotels:
+            hotel.selected = hotel.id == hotel_id
+            if hotel.selected:
+                selected = hotel
+        await self._session.flush()
+        return selected

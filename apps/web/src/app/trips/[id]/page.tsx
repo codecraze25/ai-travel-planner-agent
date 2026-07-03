@@ -3,13 +3,17 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getTrip, type Trip } from "@/lib/api";
+import { BudgetBar } from "@/components/BudgetBar";
+import { FlightsPanel } from "@/components/FlightsPanel";
+import { HotelsPanel } from "@/components/HotelsPanel";
+import { getBudget, getTrip, type Budget, type Trip } from "@/lib/api";
 
 const tabs = ["Overview", "Flights", "Hotels", "Documents", "Itinerary", "Email"] as const;
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [budget, setBudget] = useState<Budget | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Overview");
 
@@ -17,8 +21,14 @@ export default function TripDetailPage() {
     let cancelled = false;
     async function load() {
       try {
-        const data = await getTrip(params.id);
-        if (!cancelled) setTrip(data);
+        const [data, budgetData] = await Promise.all([
+          getTrip(params.id),
+          getBudget(params.id).catch(() => null),
+        ]);
+        if (!cancelled) {
+          setTrip(data);
+          setBudget(budgetData);
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load trip");
       }
@@ -50,6 +60,8 @@ export default function TripDetailPage() {
           {trip.start_date} – {trip.end_date} · {trip.status}
         </p>
       </div>
+
+      <BudgetBar budget={budget} />
 
       <nav className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
         {tabs.map((tab) => (
@@ -94,7 +106,15 @@ export default function TripDetailPage() {
         </section>
       )}
 
-      {activeTab !== "Overview" && (
+      {activeTab === "Flights" && (
+        <FlightsPanel tripId={trip.id} onBudgetChange={setBudget} />
+      )}
+
+      {activeTab === "Hotels" && (
+        <HotelsPanel tripId={trip.id} onBudgetChange={setBudget} />
+      )}
+
+      {(activeTab === "Documents" || activeTab === "Itinerary" || activeTab === "Email") && (
         <section className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
           {activeTab} — coming in a later phase.
         </section>

@@ -2,12 +2,12 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-phase%201-blue)
-![stage](https://img.shields.io/badge/stage-trip%20CRUD-lightgrey)
+![status](https://img.shields.io/badge/status-phase%202-blue)
+![stage](https://img.shields.io/badge/stage-travel%20search-lightgrey)
 
 ## Status
 
-**Phase 1** — trip CRUD API, domain validation, dev auth, dashboard, new trip form, and trip detail shell. Flight/hotel search is Phase 2.
+**Phase 2** — trip CRUD plus flight/hotel search (mock providers), tradeoff summaries, selection, and live budget bar. PDF/RAG is Phase 3.
 
 ## Quick start (Docker only)
 
@@ -105,5 +105,5 @@ docker-compose.yml
 ## Next steps
 
 1. Install Docker Desktop, then `docker compose up --build`
-2. Create a Tokyo trip at http://localhost:3000/trips/new
-3. Phase 2 — Flight and hotel search — see [docs/PLAN.md](./docs/PLAN.md#phase-2--travel-search)
+2. Create a Tokyo trip → Flights tab → Search → Select → Hotels tab → Search → Select
+3. Phase 3 — PDF upload and RAG — see [docs/PLAN.md](./docs/PLAN.md#phase-3--documents--rag)

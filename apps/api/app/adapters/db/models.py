@@ -3,7 +3,18 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,6 +64,12 @@ class TripModel(Base):
     preferences: Mapped[TripPreferencesModel | None] = relationship(
         back_populates="trip", uselist=False, cascade="all, delete-orphan"
     )
+    flights: Mapped[list[FlightModel]] = relationship(
+        back_populates="trip", cascade="all, delete-orphan"
+    )
+    hotels: Mapped[list[HotelModel]] = relationship(
+        back_populates="trip", cascade="all, delete-orphan"
+    )
 
 
 class TripPreferencesModel(Base):
@@ -72,3 +89,52 @@ class TripPreferencesModel(Base):
     constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     trip: Mapped[TripModel] = relationship(back_populates="preferences")
+
+
+class FlightModel(Base):
+    __tablename__ = "flights"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), index=True
+    )
+    external_id: Mapped[str] = mapped_column(String(255))
+    airline: Mapped[str] = mapped_column(String(255))
+    flight_number: Mapped[str] = mapped_column(String(64))
+    departure_time: Mapped[str] = mapped_column(String(64))
+    arrival_time: Mapped[str] = mapped_column(String(64))
+    duration_minutes: Mapped[int] = mapped_column(Integer)
+    stops: Mapped[int] = mapped_column(Integer, default=0)
+    price_usd: Mapped[float] = mapped_column(Float)
+    baggage_info: Mapped[str | None] = mapped_column(Text, nullable=True)
+    booking_link: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancellation_policy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected: Mapped[bool] = mapped_column(Boolean, default=False)
+    raw_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    trip: Mapped[TripModel] = relationship(back_populates="flights")
+
+
+class HotelModel(Base):
+    __tablename__ = "hotels"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("trips.id", ondelete="CASCADE"), index=True
+    )
+    external_id: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255))
+    price_per_night_usd: Mapped[float] = mapped_column(Float)
+    total_price_usd: Mapped[float] = mapped_column(Float)
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    amenities: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    cancellation_policy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    photo_urls: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    booking_link: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected: Mapped[bool] = mapped_column(Boolean, default=False)
+    raw_json: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    trip: Mapped[TripModel] = relationship(back_populates="hotels")

@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docker-compose.yml` — Postgres (pgvector), Redis, MinIO, API, Web.
   - `.github/workflows/ci.yml` — lint, typecheck, test, build, security scans.
   - `.env.example`, pre-commit config, PR/issue templates.
+- Phase 1 trip CRUD: users/trips migrations, trip API, dashboard, new trip form, trip detail shell, dev auth.
+- Phase 2 travel search: mock flight/hotel providers, search/select endpoints, budget tracking, Flights/Hotels UI with tradeoff summaries and booking links.
 
 <!--
 Template for future releases:
