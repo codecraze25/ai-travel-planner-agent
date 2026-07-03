@@ -2,28 +2,89 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-planning-blue)
-![stage](https://img.shields.io/badge/stage-MVP%20design-lightgrey)
-<!-- CI/coverage badges added in Phase 0 once pipelines exist -->
+![status](https://img.shields.io/badge/status-phase%201-blue)
+![stage](https://img.shields.io/badge/stage-trip%20CRUD-lightgrey)
 
 ## Status
 
-**Planning phase** — requirements, delivery plan, architecture, and engineering practices are defined. Application code has not started; Phase 0 (project setup) is the next step.
+**Phase 1** — trip CRUD API, domain validation, dev auth, dashboard, new trip form, and trip detail shell. Flight/hotel search is Phase 2.
+
+## Quick start (Docker only)
+
+You do **not** need a Python venv on your machine. The API container installs dependencies and runs **uvicorn** for you.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+
+### Start the stack
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+On startup the `api` service:
+
+1. Runs `alembic upgrade head` (creates `users` / `trips` tables)
+2. Starts `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+
+Open:
+
+| Service | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API health | http://localhost:8000/health |
+| API ready | http://localhost:8000/ready |
+| API docs | http://localhost:8000/docs |
+| MinIO console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+
+Dev auth is on by default (`AUTH_DISABLED=true`) — no Clerk keys needed.
+
+### Useful commands
+
+```bash
+docker compose up --build          # start everything
+docker compose logs -f api         # watch uvicorn logs
+docker compose down                # stop
+docker compose exec api alembic upgrade head   # re-run migrations if needed
+```
+
+### Why no venv?
+
+A **venv** is only for running Python tools *on the host* (outside Docker). With Docker:
+
+- Dependencies install **inside** the `api` image
+- **uvicorn** runs **inside** the container
+- Postgres, Redis, and MinIO run as sibling containers
+
+Host-side `apps/api/.venv` is optional and only useful if you want to run pytest/ruff without Docker.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) | Functional/non-functional requirements, threat model, requirement traceability |
-| [docs/PLAN.md](./docs/PLAN.md) | Delivery plan: ways of working, CI/CD, environments, phase gates, AI engineering |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System context, clean-architecture layers, data flow, agent design |
-| [docs/ENGINEERING.md](./docs/ENGINEERING.md) | Engineering handbook: branching, commits, CI/CD, testing, security |
+| [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) | Functional/non-functional requirements, threat model, traceability |
+| [docs/PLAN.md](./docs/PLAN.md) | Delivery plan: ways of working, CI/CD, phase gates, AI engineering |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System context, clean-architecture layers, agent design |
+| [docs/ENGINEERING.md](./docs/ENGINEERING.md) | Engineering handbook |
 | [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Local setup, operations, failure recovery |
 | [docs/adr/](./docs/adr/) | Architecture Decision Records |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution workflow and self-review checklist |
-| [CHANGELOG.md](./CHANGELOG.md) | Release history (SemVer + Keep a Changelog) |
+| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contribution workflow |
+| [CHANGELOG.md](./CHANGELOG.md) | Release history |
 
-## MVP Scope
+## Repository layout
+
+```
+apps/web          # Next.js frontend
+apps/api          # FastAPI backend (uvicorn in Docker)
+packages/shared   # Shared TypeScript types
+docs/             # Requirements, plan, architecture, ADRs, runbook
+.github/          # CI workflows and templates
+docker-compose.yml
+```
+
+## MVP scope
 
 - Trip creation with preferences
 - Flight and hotel search (booking links only — no auto-book)
@@ -32,31 +93,17 @@ An AI-powered travel planning assistant that searches flights and hotels, reads 
 - Email draft with manual approval
 - LangGraph agent with guardrails and audit logging
 
-## Tech Stack
+## Tech stack
 
 - **Frontend:** Next.js, React, TypeScript, Tailwind
-- **Backend:** FastAPI (clean architecture), LangGraph
+- **Backend:** FastAPI + uvicorn (clean architecture), LangGraph (Phase 4)
 - **Database:** PostgreSQL + pgvector
-- **Queue:** Redis + Celery
+- **Queue:** Redis (+ Celery in Phase 3)
 - **Storage:** S3 / MinIO
-- **CI/CD:** GitHub Actions (lint, typecheck, test, build, security, ai-eval)
+- **CI/CD:** GitHub Actions
 
-Key technology choices are recorded as [ADRs](./docs/adr/).
+## Next steps
 
-## Engineering Principles
-
-- Trunk-based development, Conventional Commits, PR-per-change with green CI
-- Clean architecture with providers behind interfaces (mock + real)
-- Guardrails enforced in code (no send/book without explicit approval)
-- Observability from day one (structured logs, traces, metrics, audit)
-- Enforceable phase gates: coverage, security, and observability
-
-## Getting Started
-
-Local setup and operations are documented in [docs/RUNBOOK.md](./docs/RUNBOOK.md#2-local-setup). These become runnable once Phase 0 lands.
-
-## Next Steps
-
-1. Confirm the recorded decisions in [docs/adr/](./docs/adr/).
-2. Begin Phase 0 (project setup) from [docs/PLAN.md](./docs/PLAN.md#phase-0--project-setup).
-3. Work the [First Sprint Backlog](./docs/PLAN.md#15-first-sprint-backlog-start-here).
+1. Install Docker Desktop, then `docker compose up --build`
+2. Create a Tokyo trip at http://localhost:3000/trips/new
+3. Phase 2 — Flight and hotel search — see [docs/PLAN.md](./docs/PLAN.md#phase-2--travel-search)

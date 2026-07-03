@@ -16,9 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/RUNBOOK.md` — local setup, operations, failure recovery.
   - `docs/adr/` — Architecture Decision Records (0001–0006).
   - `CONTRIBUTING.md` and this `CHANGELOG.md`.
-
-### Notes
-- Planning phase only; application code has not been implemented yet.
+- Phase 0 monorepo scaffold:
+  - `apps/api` — FastAPI app with clean-architecture layout, `/health` + `/ready`, correlation IDs, Alembic bootstrap, tests.
+  - `apps/web` — Next.js status page that calls the API health endpoints.
+  - `packages/shared` — shared TypeScript domain types.
+  - `docker-compose.yml` — Postgres (pgvector), Redis, MinIO, API, Web.
+  - `.github/workflows/ci.yml` — lint, typecheck, test, build, security scans.
+  - `.env.example`, pre-commit config, PR/issue templates.
 
 <!--
 Template for future releases:

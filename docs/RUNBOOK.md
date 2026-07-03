@@ -1,106 +1,96 @@
 # AI Travel Planner Assistant — Runbook
 
-> Operational guide: local setup, common operations, and failure recovery. Written to be usable during an incident. Note: implementation has not started yet, so commands below describe the intended workflow (Phase 0 will make them real).
+> Operational guide: Docker-first local setup, common operations, and failure recovery.
 
 ## 1. Prerequisites
 
-- Docker + Docker Compose
-- Node.js 20+ and pnpm (web)
-- Python 3.11+ and uv/pip (api)
-- `make` (optional convenience targets)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
-## 2. Local Setup
+You do **not** need a host Python venv or Node install for day-to-day work. The `api` container runs **uvicorn**; the `web` container serves Next.js.
+
+## 2. Local Setup (Docker)
 
 ```bash
-# 1. Clone and copy env
 cp .env.example .env
-# fill in required values; defaults use mock providers (no API keys needed)
-
-# 2. Start infrastructure + apps
-docker compose up -d        # Postgres(+pgvector), Redis, MinIO, api, web
-
-# 3. Run migrations + seed
-docker compose exec api alembic upgrade head
-docker compose exec api python -m app.scripts.seed_demo
-
-# 4. Install pre-commit hooks (host)
-pre-commit install
+docker compose up --build
 ```
 
-Verify:
-- Web: http://localhost:3000
-- API health: http://localhost:8000/health
-- API readiness: http://localhost:8000/ready  (checks DB, Redis, storage)
+What happens on `api` start (`scripts/entrypoint.py`):
 
-By default `USE_MOCK_PROVIDERS=true`, so flight/hotel search works without external keys.
+1. `alembic upgrade head` — applies migrations
+2. `uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload`
+
+Verify:
+
+| Check | URL |
+|-------|-----|
+| Web | http://localhost:3000 |
+| API health | http://localhost:8000/health |
+| API readiness | http://localhost:8000/ready |
+| OpenAPI docs | http://localhost:8000/docs |
+| MinIO console | http://localhost:9001 (`minioadmin` / `minioadmin`) |
+
+Defaults: `USE_MOCK_PROVIDERS=true`, `AUTH_DISABLED=true` (no external keys).
+
+### Why no venv?
+
+| Approach | When to use |
+|----------|-------------|
+| **Docker (default)** | Normal development. Deps + uvicorn live in the container. |
+| **Host venv** | Optional: run `pytest` / `ruff` on the host without Docker. Not required. |
 
 ## 3. Common Operations
 
 | Task | Command |
 |------|---------|
-| Tail API logs | `docker compose logs -f api` |
-| Tail worker logs | `docker compose logs -f worker` |
-| New migration | `docker compose exec api alembic revision --autogenerate -m "msg"` |
-| Apply migrations | `docker compose exec api alembic upgrade head` |
+| Start stack | `docker compose up --build` |
+| Stop stack | `docker compose down` |
+| Tail uvicorn logs | `docker compose logs -f api` |
+| Rebuild API only | `docker compose up --build api` |
+| Re-run migrations | `docker compose exec api alembic upgrade head` |
 | Rollback one migration | `docker compose exec api alembic downgrade -1` |
-| Run backend tests | `docker compose exec api pytest` |
-| Run web tests | `pnpm --filter web test` |
-| Run agent eval | `docker compose exec api pytest tests/eval -q` |
-| Rebuild after deps change | `docker compose build && docker compose up -d` |
+| Shell into API | `docker compose exec api sh` |
+
+Source under `apps/api/app` is volume-mounted, so uvicorn `--reload` picks up code changes without rebuilding (unless you change `pyproject.toml` dependencies).
 
 ## 4. Health & Readiness
 
-- `/health` — process is alive. If failing: check container status (`docker compose ps`), restart the api service.
-- `/ready` — dependencies reachable. If a dependency is red, see the matching runbook section below.
+- `/health` — process is alive (uvicorn is up).
+- `/ready` — `database`, `redis`, `storage` reachable. All should be `true` under Docker Compose.
 
 ## 5. Failure Recovery
 
-### 5.1 Database unavailable
-- Symptom: `/ready` reports DB unhealthy; 500s on trip endpoints.
-- Check: `docker compose ps postgres`, `docker compose logs postgres`.
-- Fix: restart Postgres; verify `DATABASE_URL`; ensure migrations applied.
+### Docker not found
+- Install [Docker Desktop](https://www.docker.com/products/docker-desktop/), start it, and open a **new** terminal so `docker` is on PATH.
 
-### 5.2 Redis / worker issues
-- Symptom: PDF parse or itinerary jobs stuck in `pending`.
-- Check: `docker compose logs -f worker`; Redis reachable; queue depth metric.
-- Fix: restart worker; failed jobs persist their error payload (NFR-REL-03) and can be retried from the UI.
+### Database unavailable
+- Check: `docker compose ps postgres`, `docker compose logs postgres`
+- Fix: `docker compose restart postgres`, then `docker compose restart api`
 
-### 5.3 Storage (S3/MinIO) unavailable
-- Symptom: upload URL generation fails; document uploads error.
-- Check: MinIO console (http://localhost:9001), bucket exists, credentials valid.
-- Fix: restart MinIO; recreate `travel-docs` bucket; verify signed-URL TTL config.
+### Storage (MinIO) unavailable
+- Check MinIO console http://localhost:9001
+- Fix: `docker compose restart minio` (API creates the `travel-docs` bucket on startup)
 
-### 5.4 Flight/Hotel provider down
-- Symptom: search returns errors or times out.
-- Behavior: system retries with backoff (NFR-REL-01), then degrades to mock/cached data with a clear user message (NFR-REL-05).
-- Fix: set `USE_MOCK_PROVIDERS=true` to continue working; check provider status page and API quota.
+### Migration failed on startup
+- Check: `docker compose logs api`
+- Fix: ensure Postgres is healthy, then `docker compose up --build api`
 
-### 5.5 LLM provider errors / cost spike
-- Symptom: agent chat fails or `api_usage` shows unusual cost.
-- Check: LLM provider status; `api_usage` per-trip cost report; chat turn caps.
-- Fix: switch `LLM_MODEL` to a cheaper model; verify structured-output retries are bounded; investigate any prompt-injection attempt in `agent_actions`.
+## 6. Optional: host-side tools (venv)
 
-### 5.6 Agent produced bad/unsafe output
-- Guardrails are enforced in code: `send_email` requires approval; `book_hotel` is disabled. If an unapproved action is suspected, check `audit_logs` and the guardrail eval suite.
-- Reproduce with the offending input as a new eval fixture; fix; add regression test.
-
-## 6. Data Deletion (compliance)
-
-To honor a deletion request (FR-DOC-05 / NFR-SEC-06):
+Only if you want to run tests without Docker:
 
 ```bash
-docker compose exec api python -m app.scripts.delete_user_data --user <id>
+cd apps/api
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+pytest
 ```
 
-This removes S3 objects, document rows, chunks, and associated trip data; the action is written to `audit_logs`.
+This does **not** replace Docker for running the app.
 
-## 7. Deploy & Rollback (target, post-MVP)
+## 7. Related Documents
 
-- Deploy: build image (tagged by SHA + SemVer) → push → run migrations → deploy → smoke test `/ready`.
-- Rollback: redeploy previous image tag. Migrations are backward-compatible (expand/contract), so app rollback does not require a DB downgrade.
-
-## 8. Related Documents
-
-- [PLAN.md](./PLAN.md) — Delivery plan
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — System design
-- [ENGINEERING.md](./ENGINEERING.md) — Engineering practices
+- [PLAN.md](./PLAN.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [ENGINEERING.md](./ENGINEERING.md)

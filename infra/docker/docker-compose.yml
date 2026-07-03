@@ -1,0 +1,4 @@
+# Canonical compose file lives at the repository root:
+#   docker compose up --build
+#
+# This path is reserved for additional infra overlays (staging, prod) later.
