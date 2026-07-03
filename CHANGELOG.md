@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 2 travel search: mock flight/hotel providers, search/select endpoints, budget tracking, Flights/Hotels UI with tradeoff summaries and booking links.
 - Phase 3 documents & RAG: PDF upload to S3/MinIO, PyMuPDF parsing, structured extraction, chunk embeddings, semantic search with source citations, Documents tab UI.
 - Phase 4 agent & itinerary: mock agent chat (SSE), tool wiring (search, read_pdf, budget, generate_itinerary), guardrails, itinerary CRUD, Chat + Itinerary tabs, eval harness.
+- Phase 5 email & polish: email drafts/templates, approve/reject, .eml export (no SMTP), activity audit feed, Privacy/Terms placeholders, host-local MVP demo path.
 
 <!--
 Template for future releases:

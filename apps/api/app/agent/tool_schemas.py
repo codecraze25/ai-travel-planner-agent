@@ -72,10 +72,41 @@ CALCULATE_BUDGET_TOOL = {
     },
 }
 
+DRAFT_EMAIL_TOOL = {
+    "name": "draft_email",
+    "description": "Create an email draft for user review. Does not send.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "trip_id": {"type": "string"},
+            "template": {
+                "type": "string",
+                "enum": ["itinerary_summary", "family_share"],
+            },
+            "recipients": {"type": "string"},
+        },
+        "required": ["trip_id"],
+    },
+}
+
+SEND_EMAIL_TOOL = {
+    "name": "send_email",
+    "description": (
+        "Export approved email as .eml (MVP). Requires explicit user approval. Does not use SMTP."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"trip_id": {"type": "string"}},
+        "required": ["trip_id"],
+    },
+}
+
 ALL_TOOLS = [
     SEARCH_FLIGHTS_TOOL,
     SEARCH_HOTELS_TOOL,
     READ_PDF_TOOL,
     GENERATE_ITINERARY_TOOL,
     CALCULATE_BUDGET_TOOL,
+    DRAFT_EMAIL_TOOL,
+    SEND_EMAIL_TOOL,
 ]

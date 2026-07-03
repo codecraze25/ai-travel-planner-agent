@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import get_settings
 
+
 def _database_url() -> str:
     settings = get_settings()
     url = settings.database_url
@@ -48,8 +49,8 @@ async def init_database() -> None:
     """Create tables for host-local SQLite (Docker uses Alembic migrations)."""
     if not settings.database_url.startswith("sqlite"):
         return
-    from app.adapters.db.base import Base
     from app.adapters.db import models as _models  # noqa: F401 — register models
+    from app.adapters.db.base import Base
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

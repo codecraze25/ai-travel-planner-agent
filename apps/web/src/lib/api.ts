@@ -359,6 +359,122 @@ export type AgentStreamEvent = {
   data?: unknown;
 };
 
+export type EmailStatus = "draft" | "approved" | "rejected" | "exported";
+export type EmailTemplate = "itinerary_summary" | "family_share";
+
+export interface EmailDraft {
+  id: string;
+  trip_id: string;
+  template: EmailTemplate;
+  status: EmailStatus;
+  recipients: string;
+  subject: string;
+  body_text: string;
+  body_html: string;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getLatestEmail(
+  tripId: string,
+  token?: string | null,
+): Promise<EmailDraft> {
+  return apiFetch<EmailDraft>(`/trips/${tripId}/emails/latest`, {}, token);
+}
+
+export async function draftEmail(
+  tripId: string,
+  template: EmailTemplate = "itinerary_summary",
+  recipients?: string,
+  token?: string | null,
+): Promise<EmailDraft> {
+  return apiFetch<EmailDraft>(
+    `/trips/${tripId}/emails/draft`,
+    {
+      method: "POST",
+      body: JSON.stringify({ template, recipients: recipients ?? null }),
+    },
+    token,
+  );
+}
+
+export async function updateEmail(
+  tripId: string,
+  emailId: string,
+  payload: {
+    recipients?: string;
+    subject?: string;
+    body_text?: string;
+    body_html?: string;
+  },
+  token?: string | null,
+): Promise<EmailDraft> {
+  return apiFetch<EmailDraft>(
+    `/trips/${tripId}/emails/${emailId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    token,
+  );
+}
+
+export async function approveEmail(
+  tripId: string,
+  emailId: string,
+  token?: string | null,
+): Promise<EmailDraft> {
+  return apiFetch<EmailDraft>(
+    `/trips/${tripId}/emails/${emailId}/approve`,
+    { method: "POST", body: "{}" },
+    token,
+  );
+}
+
+export async function rejectEmail(
+  tripId: string,
+  emailId: string,
+  token?: string | null,
+): Promise<EmailDraft> {
+  return apiFetch<EmailDraft>(
+    `/trips/${tripId}/emails/${emailId}/reject`,
+    { method: "POST", body: "{}" },
+    token,
+  );
+}
+
+export async function exportEmail(
+  tripId: string,
+  emailId: string,
+  token?: string | null,
+): Promise<{ email: EmailDraft; eml: string; filename: string }> {
+  return apiFetch(
+    `/trips/${tripId}/emails/${emailId}/export`,
+    { method: "POST", body: "{}" },
+    token,
+  );
+}
+
+export interface ActivityItem {
+  id: string;
+  kind: string;
+  action: string;
+  success?: boolean | null;
+  details?: Record<string, unknown> | null;
+  error_message?: string | null;
+  created_at: string;
+}
+
+export async function listActivity(
+  tripId: string,
+  token?: string | null,
+): Promise<ActivityItem[]> {
+  const data = await apiFetch<{ items: ActivityItem[] }>(
+    `/trips/${tripId}/activity`,
+    {},
+    token,
+  );
+  return data.items;
+}
+
 export async function streamAgentChat(
   tripId: string,
   message: string,

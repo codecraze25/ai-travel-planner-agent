@@ -56,14 +56,31 @@ class AgentRunner:
             if "error" not in itinerary:
                 days = len({item["day_number"] for item in itinerary.get("items", [])})
                 yield {"type": "itinerary", "data": itinerary}
-                yield {
-                    "type": "message",
-                    "role": "assistant",
-                    "content": (
-                        f"Your {days}-day itinerary is ready with daily cost estimates "
-                        "and map links. Open the Itinerary tab to review or regenerate a day."
-                    ),
-                }
+
+                yield {"type": "tool_call", "tool": "draft_email", "input": {}}
+                draft = await self._tools.invoke("draft_email", {})
+                yield {"type": "tool_result", "tool": "draft_email", "output": draft}
+
+                if "error" not in draft:
+                    yield {"type": "email_draft", "data": draft}
+                    yield {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": (
+                            f"Your {days}-day itinerary is ready. I also drafted an email "
+                            "summary — open the Email tab to review, approve, and download "
+                            "the .eml file. Nothing is sent without your approval."
+                        ),
+                    }
+                else:
+                    yield {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": (
+                            f"Your {days}-day itinerary is ready. "
+                            f"Email draft failed: {draft['error']}"
+                        ),
+                    }
             else:
                 yield {
                     "type": "message",
@@ -71,6 +88,34 @@ class AgentRunner:
                     "content": f"I couldn't generate the itinerary: {itinerary['error']}",
                 }
 
+            yield {"type": "done"}
+            return
+
+        if "email" in normalized or "draft" in normalized:
+            yield {
+                "type": "message",
+                "role": "assistant",
+                "content": "Drafting an itinerary email for your review…",
+            }
+            yield {"type": "tool_call", "tool": "draft_email", "input": {}}
+            draft = await self._tools.invoke("draft_email", {})
+            yield {"type": "tool_result", "tool": "draft_email", "output": draft}
+            if "error" not in draft:
+                yield {"type": "email_draft", "data": draft}
+                yield {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": (
+                        "Email draft ready on the Email tab. Approve it before exporting — "
+                        "I will not send without your approval."
+                    ),
+                }
+            else:
+                yield {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": f"Could not draft email: {draft['error']}",
+                }
             yield {"type": "done"}
             return
 

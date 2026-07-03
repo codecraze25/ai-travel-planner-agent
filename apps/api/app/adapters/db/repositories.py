@@ -8,8 +8,10 @@ from sqlalchemy.orm import selectinload
 
 from app.adapters.db.models import (
     AgentActionModel,
+    AuditLogModel,
     DocumentChunkModel,
     DocumentModel,
+    EmailModel,
     FlightModel,
     HotelModel,
     ItineraryItemModel,
@@ -303,5 +305,73 @@ class AgentActionRepository:
             select(AgentActionModel)
             .where(AgentActionModel.trip_id == trip_id)
             .order_by(AgentActionModel.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+
+class EmailRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def create(self, email: EmailModel) -> EmailModel:
+        self._session.add(email)
+        await self._session.flush()
+        return email
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[EmailModel]:
+        result = await self._session.execute(
+            select(EmailModel)
+            .where(EmailModel.trip_id == trip_id)
+            .order_by(EmailModel.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_for_trip(self, email_id: uuid.UUID, trip_id: uuid.UUID) -> EmailModel | None:
+        result = await self._session.execute(
+            select(EmailModel).where(EmailModel.id == email_id, EmailModel.trip_id == trip_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_latest_for_trip(self, trip_id: uuid.UUID) -> EmailModel | None:
+        result = await self._session.execute(
+            select(EmailModel)
+            .where(EmailModel.trip_id == trip_id)
+            .order_by(EmailModel.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def save(self, email: EmailModel) -> EmailModel:
+        await self._session.flush()
+        return email
+
+
+class AuditLogRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def log(
+        self,
+        *,
+        trip_id: uuid.UUID,
+        user_id: uuid.UUID,
+        action: str,
+        details: dict[str, object] | None = None,
+    ) -> AuditLogModel:
+        entry = AuditLogModel(
+            trip_id=trip_id,
+            user_id=user_id,
+            action=action,
+            details=details,
+        )
+        self._session.add(entry)
+        await self._session.flush()
+        return entry
+
+    async def list_for_trip(self, trip_id: uuid.UUID) -> list[AuditLogModel]:
+        result = await self._session.execute(
+            select(AuditLogModel)
+            .where(AuditLogModel.trip_id == trip_id)
+            .order_by(AuditLogModel.created_at.desc())
         )
         return list(result.scalars().all())

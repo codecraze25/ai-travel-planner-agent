@@ -21,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.adapters.db.base import Base
 from app.domain.documents import DocumentStatus
+from app.domain.email import EmailStatus, EmailTemplate
 from app.domain.trip import TripStatus
 
 
@@ -84,6 +85,12 @@ class TripModel(Base):
         back_populates="trip", cascade="all, delete-orphan"
     )
     agent_actions: Mapped[list[AgentActionModel]] = relationship(
+        back_populates="trip", cascade="all, delete-orphan"
+    )
+    emails: Mapped[list[EmailModel]] = relationship(
+        back_populates="trip", cascade="all, delete-orphan"
+    )
+    audit_logs: Mapped[list[AuditLogModel]] = relationship(
         back_populates="trip", cascade="all, delete-orphan"
     )
 
@@ -263,3 +270,61 @@ class AgentActionModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     trip: Mapped[TripModel] = relationship(back_populates="agent_actions")
+
+
+class EmailModel(Base):
+    __tablename__ = "emails"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("trips.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    template: Mapped[EmailTemplate] = mapped_column(
+        Enum(
+            EmailTemplate,
+            name="email_template",
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+        ),
+        default=EmailTemplate.ITINERARY_SUMMARY,
+    )
+    status: Mapped[EmailStatus] = mapped_column(
+        Enum(
+            EmailStatus,
+            name="email_status",
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False,
+        ),
+        default=EmailStatus.DRAFT,
+    )
+    recipients: Mapped[str] = mapped_column(String(1024))
+    subject: Mapped[str] = mapped_column(String(512))
+    body_text: Mapped[str] = mapped_column(Text)
+    body_html: Mapped[str] = mapped_column(Text)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    trip: Mapped[TripModel] = relationship(back_populates="emails")
+
+
+class AuditLogModel(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trip_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("trips.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    action: Mapped[str] = mapped_column(String(128))
+    details: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    trip: Mapped[TripModel] = relationship(back_populates="audit_logs")

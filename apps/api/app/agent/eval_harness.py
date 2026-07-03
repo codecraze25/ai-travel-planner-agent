@@ -36,7 +36,13 @@ def eval_golden_tokyo_itinerary() -> None:
     assert total_cost > 0
 
 
+def eval_send_allowed_with_approval() -> None:
+    allowed, _ = is_tool_allowed("send_email", user_approved=True)
+    assert allowed, "send_email must be allowed after approval"
+
+
 def run_eval_suite() -> None:
     eval_guardrails_no_send_without_approval()
     eval_guardrails_no_book_in_mvp()
+    eval_send_allowed_with_approval()
     eval_golden_tokyo_itinerary()

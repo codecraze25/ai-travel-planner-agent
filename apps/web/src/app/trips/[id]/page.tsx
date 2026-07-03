@@ -3,15 +3,26 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ActivityPanel } from "@/components/ActivityPanel";
 import { BudgetBar } from "@/components/BudgetBar";
 import { ChatPanel } from "@/components/ChatPanel";
 import { DocumentsPanel } from "@/components/DocumentsPanel";
+import { EmailPanel } from "@/components/EmailPanel";
 import { FlightsPanel } from "@/components/FlightsPanel";
 import { HotelsPanel } from "@/components/HotelsPanel";
 import { ItineraryPanel } from "@/components/ItineraryPanel";
 import { getBudget, getTrip, type Budget, type Trip } from "@/lib/api";
 
-const tabs = ["Overview", "Chat", "Flights", "Hotels", "Documents", "Itinerary", "Email"] as const;
+const tabs = [
+  "Overview",
+  "Chat",
+  "Flights",
+  "Hotels",
+  "Documents",
+  "Itinerary",
+  "Email",
+  "Activity",
+] as const;
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
@@ -106,6 +117,9 @@ export default function TripDetailPage() {
               <span className="font-medium">Flight:</span> {trip.preferences.flight_prefs}
             </p>
           )}
+          <p className="pt-2 text-slate-500">
+            Tip: use Chat → “Plan my trip”, then review Itinerary and Email tabs.
+          </p>
         </section>
       )}
 
@@ -123,9 +137,12 @@ export default function TripDetailPage() {
 
       {activeTab === "Itinerary" && <ItineraryPanel tripId={trip.id} />}
 
-      {activeTab === "Email" && (
-        <section className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-          Email drafts and approval — coming in Phase 5.
+      {activeTab === "Email" && <EmailPanel tripId={trip.id} />}
+
+      {activeTab === "Activity" && (
+        <section className="rounded-xl border border-slate-200 bg-white p-6">
+          <h2 className="mb-3 text-sm font-semibold text-slate-900">Trip activity</h2>
+          <ActivityPanel tripId={trip.id} />
         </section>
       )}
     </div>

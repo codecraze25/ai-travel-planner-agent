@@ -2,12 +2,12 @@
 
 An AI-powered travel planning assistant that searches flights and hotels, reads travel PDFs, generates itineraries, and drafts emails — with explicit user approval before anything is sent or booked.
 
-![status](https://img.shields.io/badge/status-phase%204-blue)
-![stage](https://img.shields.io/badge/stage-agent%20%26%20itinerary-lightgrey)
+![status](https://img.shields.io/badge/status-mvp-green)
+![stage](https://img.shields.io/badge/stage-email%20%26%20polish-lightgrey)
 
 ## Status
 
-**Phase 4** — mock agent chat (SSE), itinerary generation, guardrails, and eval harness. Email approval flow is Phase 5.
+**MVP complete** — trips, search, documents/RAG, agent itinerary, email drafts with approval, and activity audit feed.
 
 ## Quick start (no Docker)
 
@@ -111,5 +111,5 @@ docker-compose.yml
 ## Next steps
 
 1. Run `.\scripts\dev.ps1` and open http://localhost:3000
-2. Create a Tokyo trip → open **Chat** → “Plan my trip” → review **Itinerary** tab
-3. Phase 5 — email drafts and approval — see [docs/PLAN.md](./docs/PLAN.md#phase-5--email--polish)
+2. Create a Tokyo trip → **Chat** → “Plan my trip” → review **Itinerary** → **Email** (approve → download `.eml`) → **Activity**
+3. Post-MVP ideas — see [docs/PLAN.md](./docs/PLAN.md#13-post-mvp-roadmap)
